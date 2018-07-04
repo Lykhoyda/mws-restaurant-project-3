@@ -1,7 +1,3 @@
-let restaurants, neighborhoods, cuisines;
-var map;
-var markers = [];
-
 /**
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
  */
@@ -134,6 +130,7 @@ const fillRestaurantsHTML = (restaurants = self.restaurants) => {
   restaurants.forEach(restaurant => {
     ul.append(createRestaurantHTML(restaurant));
   });
+  addLazyLoading();
   addMarkersToMap();
   handleStarFavourite();
 };
@@ -143,11 +140,13 @@ const fillRestaurantsHTML = (restaurants = self.restaurants) => {
  */
 const createRestaurantHTML = restaurant => {
   const li = document.createElement("li");
-
   const image = document.createElement("img");
+
   image.className = "restaurant-img";
-  image.src = DBHelper.imageUrlForRestaurant(restaurant);
+  image.classList.add("lazy-loading");
   image.alt = `Restaurant ${restaurant.name}`;
+  image.src = DBHelper.smImageUrlForRestaurant(restaurant);
+  image.setAttribute("data-src", DBHelper.mdImageUrlForRestaurant(restaurant));
   li.append(image);
 
   const name = document.createElement("h2");
@@ -221,5 +220,44 @@ const handleStarFavourite = () => {
         DBHelper.toggleFavorite(restaurantId, false);
       }
     });
+  });
+};
+
+const addLazyLoading = () => {
+  const images = document.querySelectorAll(".lazy-loading");
+  const config = {
+    // If the image gets within 50px in the Y axis, start the download.
+    rootMargin: "50px 0px",
+    threshold: 0.01
+  };
+
+  const handleIntersection = (entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.intersectionRatio > 0) {
+        loadImage(entry.target);
+      }
+    });
+  };
+
+  const loadImage = image => {
+    const src = image.dataset.src;
+    fetchImage(src).then(() => {
+      image.src = src;
+    });
+  };
+
+  const fetchImage = url => {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.src = url;
+      image.onload = resolve;
+      image.onerror = reject;
+    });
+  };
+
+  // The observer for the images on the page
+  const observer = new IntersectionObserver(handleIntersection, config);
+  images.forEach(image => {
+    observer.observe(image);
   });
 };

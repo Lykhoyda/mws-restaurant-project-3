@@ -3,6 +3,8 @@
  */
 
 const DB_NAME = "restaurantsDB";
+const isChrome =
+  /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
 class DBHelper {
   /**
    * Database URL.
@@ -30,17 +32,21 @@ class DBHelper {
   }
 
   static saveToIDB(data) {
-    return DBHelper.openIDB().then(db => {
-      if (!db) return;
+    return DBHelper.openIDB()
+      .then(db => {
+        if (!db) return;
 
-      const tx = db.transaction(DB_NAME, "readwrite");
-      const store = tx.objectStore(DB_NAME);
-      data.forEach(restaurant => {
-        store.put(restaurant);
+        const tx = db.transaction(DB_NAME, "readwrite");
+        const store = tx.objectStore(DB_NAME);
+        data.forEach(restaurant => {
+          store.put(restaurant);
+        });
+
+        return tx.complete;
+      })
+      .catch(err => {
+        console.log("DB open failed", err);
       });
-
-      return tx.complete;
-    });
   }
 
   static getCachedRestaurants() {
@@ -218,8 +224,16 @@ class DBHelper {
    * Restaurant image URL.
    */
 
-  static imageUrlForRestaurant(restaurant) {
-    return `./img/${restaurant.id}.jpg`;
+  static mdImageUrlForRestaurant(restaurant) {
+    return isChrome
+      ? `./dist/img/${restaurant.id}-md.webp`
+      : `./dist/img/${restaurant.id}-md.jpg`;
+  }
+
+  static smImageUrlForRestaurant(restaurant) {
+    return isChrome
+      ? `./dist/img/${restaurant.id}-sm.webp`
+      : `./dist/img/${restaurant.id}-sm.jpg`;
   }
 
   /**
@@ -440,7 +454,7 @@ class DBHelper {
   }
 
   static deletePendingReviewFromIdb(review) {
-    const dbPromise = DBHelper.openIdbDatabase();
+    const dbPromise = DBHelper.openIDB();
 
     dbPromise.then(db => {
       if (!db) return;
